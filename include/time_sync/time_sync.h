@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <type_traits>
 
 #include "circle_queue.h"
 
@@ -32,15 +33,22 @@ class TimeSync {
   typedef std::shared_ptr<CircleQueue<M3Pair>> M3CirclePtr;
 
  public:
-  TimeSync(const size_t class_size, const size_t queue_size)
-      : class_size_(class_size) {
+  TimeSync(const size_t queue_size) : class_size_(2) {
     data_queues_.resize(4);
     // 注意目前的last_time
-    last_times_.resize(class_size, 0);
     data_queues_[0] = std::make_shared<CircleQueue<M0Pair>>(queue_size);
     data_queues_[1] = std::make_shared<CircleQueue<M1Pair>>(queue_size);
-    data_queues_[2] = std::make_shared<CircleQueue<M2Pair>>(queue_size);
-    data_queues_[3] = std::make_shared<CircleQueue<M3Pair>>(queue_size);
+    if (!std::is_same<M2, NullType>::value) {
+      data_queues_[2] = std::make_shared<CircleQueue<M2Pair>>(queue_size);
+      ++class_size_;
+    }
+    if (!std::is_same<M3, NullType>::value) {
+      data_queues_[3] = std::make_shared<CircleQueue<M3Pair>>(queue_size);
+      ++class_size_;
+      NullType test;
+    }
+    std::cout << "TimeSync class size: " << class_size_ << std::endl;
+    last_times_.resize(class_size_, 0);
   };
 
   void PushMsg0(const M0 &data, const double time) {
@@ -104,7 +112,6 @@ class TimeSync {
     if (fabs(MinTime() - time) > 1e-7) {
       return;
     }
-    std::cout << "Min time: " << std::setprecision(13) << time << std::endl;
     M0PairPtr m0 = nullptr;
     M1PairPtr m1 = nullptr;
     M2PairPtr m2 = nullptr;
@@ -123,10 +130,21 @@ class TimeSync {
         m3 = FindValue<M3Pair>(time, data_queues_[3]);
       }
     }
-    if (m0 != nullptr && m1 != nullptr && m2 != nullptr) {
-      std::cout << "M0 time: " << m0->first << std::endl;
-      std::cout << "M1 time: " << m1->first << std::endl;
-      std::cout << "M2 time: " << m2->first << std::endl;
+    const bool m0_ok = m0 != nullptr;
+    const bool m1_ok = m1 != nullptr;
+    const bool m2_ok = m2 != nullptr;
+    const bool m3_ok = m3 != nullptr;
+
+    if (m0_ok && m1_ok && class_size_ == 2) {
+      function_call_back_(m0->second, m1->second, M2(), M3());
+    }
+
+    if (m0_ok && m1_ok && m2_ok && class_size_ == 3) {
+      function_call_back_(m0->second, m1->second, m2->second, M3());
+    }
+
+    if (m0_ok && m1_ok && m2_ok && m3_ok && class_size_ == 4) {
+      function_call_back_(m0->second, m1->second, m2->second, m3->second);
     }
   }
 
@@ -135,8 +153,6 @@ class TimeSync {
     std::shared_ptr<CircleQueue<T>> value =
         std::static_pointer_cast<CircleQueue<T>>(base);
     const size_t queue_size = value->QueueSize();
-    // std::cout << "\033[031m"
-    //           << "queue size: " << queue_size << "\033[0m" << std::endl;
     for (size_t i = 0; i < queue_size; ++i) {
       std::shared_ptr<T> test = value->GetQueueElement(i);
       if (test != nullptr && fabs(time - test->first) < 1e-7) {
@@ -147,13 +163,16 @@ class TimeSync {
   }
 
   double MinTime() {
-    std::cout << "last time size: " << last_times_.size() << std::endl;
     return *std::min_element(last_times_.begin(), last_times_.end());
   }
+
+ public:
+  std::function<void(const M0 &, const M1 &, const M2 &, const M3 &)>
+      function_call_back_;
 
  private:
   std::mutex lock_;
   std::vector<CircleBasePtr> data_queues_;
   std::vector<double> last_times_;
-  const size_t class_size_;
+  size_t class_size_;
 };
