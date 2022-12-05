@@ -51,59 +51,21 @@ class TimeSync {
     last_times_.resize(class_size_, 0);
   };
 
-  void PushMsg0(const M0 &data, const double time) {
-    M0PairPtr m0_ptr = std::make_shared<M0Pair>(time, data);
-    PushMsg0(m0_ptr);
+  template <class T>
+  void PushMsg(const T &data, const int index, const double time) {
+    std::shared_ptr<std::pair<double, T>> m0_ptr =
+        std::make_shared<std::pair<double, T>>(time, data);
+    PushMsg<T>(m0_ptr, index);
   }
 
-  void PushMsg0(M0PairPtr data) {
+  template <class T>
+  void PushMsg(std::shared_ptr<std::pair<double, T>> data, const int index) {
     std::lock_guard<std::mutex> guard(lock_);
-    M0CirclePtr queue = std::static_pointer_cast<M0Circle>(data_queues_[0]);
-    std::cout << "Msg0: " << std::setprecision(13) << data->first << std::endl;
+    std::shared_ptr<CircleQueue<std::pair<double, T>>> queue =
+        std::static_pointer_cast<CircleQueue<std::pair<double, T>>>(
+            data_queues_[index]);
     queue->Insert(data);
-    last_times_[0] = data->first;
-    TryToProcess(data->first);
-  }
-
-  void PushMsg1(const M1 &data, const double time) {
-    M1PairPtr m1_ptr = std::make_shared<M1Pair>(time, data);
-    PushMsg1(m1_ptr);
-  }
-
-  void PushMsg1(M1PairPtr data) {
-    std::lock_guard<std::mutex> guard(lock_);
-    M1CirclePtr queue = std::static_pointer_cast<M1Circle>(data_queues_[1]);
-    queue->Insert(data);
-    std::cout << "Msg1: " << std::setprecision(13) << data->first << std::endl;
-    last_times_[1] = data->first;
-    TryToProcess(data->first);
-  }
-
-  void PushMsg2(const M2 &data, const double time) {
-    M2PairPtr m2_ptr = std::make_shared<M2Pair>(time, data);
-    PushMsg2(m2_ptr);
-  }
-
-  void PushMsg2(M2PairPtr data) {
-    std::lock_guard<std::mutex> guard(lock_);
-    M2CirclePtr queue = std::static_pointer_cast<M2Circle>(data_queues_[2]);
-    queue->Insert(data);
-    std::cout << "Msg2: " << std::setprecision(13) << data->first << std::endl;
-    last_times_[2] = data->first;
-    TryToProcess(data->first);
-  }
-
-  void PushMsg3(const M3 &data, const double time) {
-    M3PairPtr m3_ptr = std::make_shared<M3Pair>(time, data);
-    PushMsg3(m3_ptr);
-  }
-
-  void PushMsg3(M3PairPtr data) {
-    std::lock_guard<std::mutex> guard(lock_);
-    M3CirclePtr queue = std::static_pointer_cast<M3Circle>(data_queues_[3]);
-    queue->Insert(data);
-    std::cout << "Msg3: " << std::setprecision(13) << data->first << std::endl;
-    last_times_[3] = data->first;
+    last_times_[index] = data->first;
     TryToProcess(data->first);
   }
 

@@ -12,18 +12,18 @@ TimeSync<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::PointCloud>
 void SemanticCallback(const sensor_msgs::Image &msg) {
   std::cout << "semantic img: " << std::setprecision(13)
             << msg.header.stamp.toSec() << std::endl;
-  time_sync.PushMsg0(msg, msg.header.stamp.toSec());
+  time_sync.PushMsg<sensor_msgs::Image>(msg, 0, msg.header.stamp.toSec());
 }
 void OriginCallback(const sensor_msgs::Image &msg) {
   std::cout << "origin img: " << std::setprecision(13)
             << msg.header.stamp.toSec() << std::endl;
 
-  time_sync.PushMsg1(msg, msg.header.stamp.toSec());
+  time_sync.PushMsg<sensor_msgs::Image>(msg, 2, msg.header.stamp.toSec());
 }
 void LinePointsCallback(const sensor_msgs::PointCloud &msg) {
   std::cout << "line points: " << std::setprecision(13)
             << msg.header.stamp.toSec() << std::endl;
-  time_sync.PushMsg2(msg, msg.header.stamp.toSec());
+  time_sync.PushMsg<sensor_msgs::PointCloud>(msg, 1, msg.header.stamp.toSec());
 }
 
 void Process3(const sensor_msgs::Image &img, const sensor_msgs::Image &img1,
